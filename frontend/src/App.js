@@ -97,6 +97,16 @@ function App() {
       toast.error("Please enter an image URL");
       return;
     }
+    
+    // Validate URL format
+    if (searchMode === "url") {
+      try {
+        new URL(imageUrl);
+      } catch (e) {
+        toast.error("Please enter a valid URL (e.g., https://example.com/image.jpg)");
+        return;
+      }
+    }
 
     setLoading(true);
     try {
