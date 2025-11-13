@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: visual-product-matcher-backend
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: MONGO_URL
+        sync: false
+      - key: DB_NAME
+        value: visual_product_matcher
+      - key: CORS_ORIGINS
+        value: "*"
+    rootDir: backend
+

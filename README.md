@@ -4,7 +4,14 @@ A web application that helps users find visually similar products based on uploa
 
 ## Live Demo
 
-🔗 **Application URL**: https://similarpick.preview.emergentagent.com
+🔗 **Application URL**: (Deploy using the guide below)
+
+## Quick Deployment
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed free deployment instructions using:
+- **Backend**: Render.com (Free)
+- **Frontend**: Vercel (Free)
+- **Database**: MongoDB Atlas (Free)
 
 ## Features
 
@@ -118,9 +125,9 @@ yarn start
 
 **Backend (.env)**
 ```
-MONGO_URL=mongodb://localhost:27017
-DB_NAME=visual_product_matcher
-CORS_ORIGINS=*
+MONGO_URL="mongodb+srv://Vijay830:<Vijay@123>@cluster0.hfo7ovn.mongodb.net/?appName=Cluster0"
+DB_NAME="test_database"
+CORS_ORIGINS="*"
 ```
 
 **Frontend (.env)**
@@ -224,11 +231,3 @@ Comprehensive testing performed:
 - **Sample Images**: Unsplash
 - **UI Framework**: Shadcn/UI
 - **Built with**: FastAPI + React + MongoDB
-
-## License
-
-MIT
-
----
-
-**Built with OpenAI CLIP & FastAPI** | Made with Emergent
