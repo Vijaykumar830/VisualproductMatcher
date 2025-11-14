@@ -94,10 +94,19 @@ This guide will help you deploy both the frontend and backend for free using:
    - **Build Command**: `npm run build` (or `yarn build`)
    - **Output Directory**: `build`
 6. Add Environment Variables:
-   - `REACT_APP_BACKEND_URL`: Your Render backend URL (e.g., `https://visual-product-matcher-backend.onrender.com`)
+   - **Name**: `REACT_APP_BACKEND_URL`
+   - **Value**: Your Render backend URL (e.g., `https://visual-product-matcher-backend.onrender.com`)
+   - **Important**: Make sure to include `https://` and no trailing slash
+   - **Note**: You can add this during project setup or later in Settings → Environment Variables
 7. Click "Deploy"
 8. Wait for deployment (2-5 minutes)
 9. **Copy your frontend URL** (e.g., `https://visual-product-matcher.vercel.app`)
+
+**⚠️ Important**: If you get an error about "render url does not exist":
+- Make sure your Render backend is deployed and running first
+- Check that the `REACT_APP_BACKEND_URL` environment variable is set correctly in Vercel
+- The URL should be your Render service URL (e.g., `https://your-service-name.onrender.com`)
+- Go to Vercel Dashboard → Your Project → Settings → Environment Variables to add/update it
 
 ### 3.3 Update CORS in Backend
 
