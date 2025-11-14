@@ -27,6 +27,12 @@ except ImportError:
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
+# Optimize PyTorch for low memory usage (Render free tier)
+if CLIP_AVAILABLE:
+    os.environ['OMP_NUM_THREADS'] = '1'
+    os.environ['MKL_NUM_THREADS'] = '1'
+    os.environ['TORCH_NUM_THREADS'] = '1'
+
 # MongoDB connection
 mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
 db_name = os.environ.get('DB_NAME', 'visual_product_matcher')
@@ -43,17 +49,44 @@ api_router = APIRouter(prefix="/api")
 UPLOAD_DIR = Path(ROOT_DIR) / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
 
-# Initialize CLIP model
+# Initialize CLIP model with lazy loading to save memory
 class CLIPEmbedder:
     def __init__(self):
         if not CLIP_AVAILABLE:
             raise Exception("CLIP not available")
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32").to(self.device)
-        self.processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
-        self.model.eval()
+        self.device = torch.device("cpu")  # Force CPU to save memory on Render free tier
+        self.model = None
+        self.processor = None
+        self._loaded = False
+    
+    def _load_model(self):
+        """Lazy load the model only when needed."""
+        if self._loaded:
+            return
+        
+        try:
+            # Use CPU-only torch to reduce memory
+            import torch
+            torch.set_num_threads(1)  # Limit threads to save memory
+            
+            # Load model with low_cpu_mem_usage to reduce peak memory
+            self.model = CLIPModel.from_pretrained(
+                "openai/clip-vit-base-patch32",
+                torch_dtype=torch.float32,
+                low_cpu_mem_usage=True
+            ).to(self.device)
+            self.processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
+            self.model.eval()
+            self._loaded = True
+            logging.info("CLIP model loaded successfully")
+        except Exception as e:
+            logging.error(f"Failed to load CLIP model: {e}")
+            raise
     
     def get_image_embedding(self, image):
+        if not self._loaded:
+            self._load_model()
+        
         with torch.no_grad():
             inputs = self.processor(images=image, return_tensors="pt")
             inputs = {k: v.to(self.device) for k, v in inputs.items()}
@@ -61,14 +94,14 @@ class CLIPEmbedder:
             embedding = torch.nn.functional.normalize(outputs, p=2, dim=1)
         return embedding.cpu().numpy().flatten()
 
-# Global embedder instance
+# Global embedder instance (lazy loaded)
 embedder = None
 if CLIP_AVAILABLE:
     try:
         embedder = CLIPEmbedder()
-        logging.info("CLIP model loaded successfully")
+        logging.info("CLIP embedder initialized (model will load on first use)")
     except Exception as e:
-        logging.error(f"Failed to load CLIP model: {e}")
+        logging.error(f"Failed to initialize CLIP embedder: {e}")
 
 # Define Models
 class Product(BaseModel):
@@ -130,6 +163,11 @@ def calculate_cosine_similarity(emb1: List[float], emb2: List[float]) -> float:
 @api_router.get("/")
 async def root():
     return {"message": "Visual Product Matcher API", "clip_available": CLIP_AVAILABLE}
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for Render."""
+    return {"status": "healthy", "service": "visual-product-matcher-backend"}
 
 @api_router.post("/products", response_model=Product)
 async def create_product(product: ProductCreate):
@@ -408,3 +446,10 @@ logger = logging.getLogger(__name__)
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
+    # Clear model from memory on shutdown
+    if embedder and embedder._loaded:
+        del embedder.model
+        del embedder.processor
+        import gc
+        gc.collect()
+        logging.info("CLIP model unloaded from memory")

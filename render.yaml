@@ -5,13 +5,22 @@ services:
     region: oregon
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT --workers 1
+    healthCheckPath: /health
     envVars:
       - key: MONGO_URL
         sync: false
       - key: DB_NAME
-        value: visual_product_matcher
+        value: test_database
       - key: CORS_ORIGINS
         value: "*"
+      - key: PORT
+        value: 10000
+      - key: OMP_NUM_THREADS
+        value: "1"
+      - key: MKL_NUM_THREADS
+        value: "1"
+      - key: TORCH_NUM_THREADS
+        value: "1"
     rootDir: backend
 
